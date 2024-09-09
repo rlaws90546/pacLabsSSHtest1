@@ -2,7 +2,6 @@ package ssh.demo.service;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.lang.IllegalStateException;
 
@@ -19,31 +18,24 @@ import org.eclipse.jgit.util.FS;
 public class SshService {
 	
 	private TransportConfigCallback transportConfigCallback;
+	private SshClient sshClient;
+	private SshdSessionFactory sshdSessionFactory;
 	
 	@SuppressWarnings("unused")
 	public SshService() {
 		
-		// Configure the SshClient with custom identity (private key)
-        SshClient sshClient = SshClient.setUpDefaultClient();
-        sshClient.setClientIdentityLoader(ClientIdentityLoader.DEFAULT);
-        sshClient.start();
+		// Configure the SshClient with default client identity
+        this.sshClient = SshClient.setUpDefaultClient();
+        this.sshClient.setClientIdentityLoader(ClientIdentityLoader.DEFAULT);
+        this.sshClient.start();
 
         // Configure the SshdSessionFactory with the SshClient
-        SshdSessionFactory sshdSessionFactory = new SshdSessionFactory() {
-            protected void configureSession(ClientSession session) {
-                // Custom configuration if needed, such as setting timeouts
-            }
+        this.sshdSessionFactory = new SshdSessionFactory() {
+            protected void configureSession(ClientSession session) {}
         };
 
-        /* Optionally, load a specific identity (private key) if needed
-        sshdSessionFactory.setSshClient(sshClient);
-        sshdSessionFactory.setClientIdentityLoader(ClientIdentityLoader.DEFAULT);
-        sshdSessionFactory.setKeyIdentityProvider(KeyIdentityProvider.wrapIdentities(
-                Paths.get("/path/to/private/key")));  // Replace with your private key path
-		*/
-
         // Ensure the session factory is not null before using it
-        if (sshdSessionFactory == null) {
+        if (this.sshdSessionFactory == null) {
             throw new IllegalStateException("SSH session factory is null.");
         }
 
@@ -56,17 +48,38 @@ public class SshService {
                 }
             }
         };
-        
-		/* 
-		 * Brother's code below from SSHservice.java in jackalope
+	}
+	
+	@SuppressWarnings("unused")
+	public SshService(String privKeyPath) {
+		
+		// Configure the SshClient with default client identity
+		this.sshClient = SshClient.setUpDefaultClient();
+		this.sshClient.setClientIdentityLoader(ClientIdentityLoader.DEFAULT);
+        this.sshClient.start();
 
-		File sshDir = new File(FS.DETECTED.userHome(), "/.ssh");
-		sshSessionFactory = new SshdSessionFactoryBuilder()
-		        .setPreferredAuthentications("publickey")
-		        .setHomeDirectory(FS.DETECTED.userHome())
-		        .setSshDirectory(sshDir)
-		        .build(null);
-		*/
+        // Configure the SshdSessionFactory with the SshClient and location of private key
+        File privKeyDir = Paths.get(privKeyPath).toFile();
+        this.sshdSessionFactory = new SshdSessionFactoryBuilder()
+                .setPreferredAuthentications("publickey")
+                .setHomeDirectory(FS.DETECTED.userHome())
+                .setSshDirectory(privKeyDir)
+                .build(null);
+        
+        // Ensure the session factory is not null before using it
+        if (this.sshdSessionFactory == null) {
+            throw new IllegalStateException("SSH session factory is null.");
+        }
+        
+        // Configure the transport to use the custom SshdSessionFactory
+        this.transportConfigCallback = new TransportConfigCallback() {
+            @Override
+            public void configure(Transport transport) {
+                if (transport instanceof SshTransport) {
+                    ((SshTransport) transport).setSshSessionFactory(sshdSessionFactory);
+                }
+            }
+        };
 	}
 	
 	// Returns necessary information for Git commands that require SSH verification
@@ -74,13 +87,15 @@ public class SshService {
 		return transportConfigCallback;
 	}
 	
-	/* Might use helper method to check that SSH service is not null
-	public boolean sshReady() {
-		if (transportConfigCallback != null) {
-			return true;
+	// Helper method to stop SSH client when necessary
+	public void stopService() throws IOException {
+		if (this.sshClient.isStarted()) {
+			this.sshClient.stop();
+			this.sshdSessionFactory.close();
+			System.out.println("SSH Service is stopped.");
 		} else {
-			return false;
+			System.out.println("SSH Service was not started");
 		}
 	}
-	*/
+	
 }

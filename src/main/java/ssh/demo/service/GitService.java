@@ -1,96 +1,116 @@
 package ssh.demo.service;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.lang.Process;
 import java.lang.IllegalStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.TransportConfigCallback;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.transport.SshTransport;
-import org.eclipse.jgit.transport.Transport;
-import org.eclipse.jgit.transport.sshd.SshdSessionFactory;
+import org.eclipse.jgit.api.errors.TransportException;
 import org.apache.commons.io.FileUtils;
-
-import org.apache.sshd.client.SshClient;
-import org.apache.sshd.client.config.keys.ClientIdentityLoader;
-import org.apache.sshd.client.session.ClientSession;
-import org.apache.sshd.client.simple.SimpleClient;
-import org.apache.sshd.common.keyprovider.KeyIdentityProvider;
 
 import ssh.demo.service.SshService;
 
 /**
- *  Class to provide Main.java with methods needed to push changes to GitHub.
- * 
- *  What to implement >   1. Modification of a file, take filename as parameter
- * 			              2. New file created, also take filename as parameter
+ *  Class to provide GitMain.java with methods needed to clone repositories & push changes to GitHub.
  */
 public class GitService {
 	
-	// Variables for repository to be cloned, path to the cloned directory in file system, and instance of Git
+	// Variables for repository to be cloned, should be in the format of "git@github.com/userName/repoName.git"
 	private String repo;
+	// Path to the local directory where Git commands should be called from (also destination for clone command)
 	private Path localDir;
+	// Instance of jGit's Git to perform necessary commands
 	private Git git;
+	// Instance of SSH service to standardize creating SSH client and generate a session
 	private SshService sshService;
-	//private String userName;
-	//private String email;
 	
 	@SuppressWarnings("unused")
 	private final Logger log = LoggerFactory.getLogger(getClass());
 
 	
 	/* 
-	 * Constructor to assign values to non-ssh Git parameters
-	 * 
-	 * NEED TO --> create overloaded constructor for Git
+	 * Constructor used when SSH key is in expected directory --> "Users or C:/.ssh"
 	 */
-    public GitService(/*String userName, String email,*/ String repoName, String cloneDirName) throws IOException{
-	    //this.userName = userName;
-    	//this.email = email;
+    public GitService(String repoName, String cloneDirName) throws IOException{
+
+    	this.repo = repoName;
+	    this.localDir = Paths.get(cloneDirName).toAbsolutePath().normalize();
+	    
+	    try {
+        	if (gitRepoInitialized(this.localDir)) {
+        		git = Git.open(this.localDir.toFile());
+        	} else {	
+        		git = Git.init().setDirectory(this.localDir.toFile()).call();
+        	}
+		} catch (IllegalStateException | GitAPIException e) {
+			e.printStackTrace();
+		}
+	    
+	    this.sshService = new SshService();
+    }
+    
+    /* 
+	 * Constructor used when SSH key is NOT in expected directory, which is set with the sshPath parameter
+	 */
+    public GitService(String repoName, String cloneDirName, String sshPath) throws IOException{
+    	
     	this.repo = repoName;
 	    this.localDir = Paths.get(cloneDirName).toAbsolutePath().normalize();
 	    
         try {
-			git = Git.init().setDirectory(this.localDir.toFile()).call();
+        	if (gitRepoInitialized(this.localDir)) {
+        		git = Git.open(this.localDir.toFile());
+        	} else {	
+        		git = Git.init().setDirectory(this.localDir.toFile()).call();
+        	}
 		} catch (IllegalStateException | GitAPIException e) {
 			e.printStackTrace();
 		}
         
-        sshService = new SshService();
-	    
-	    // Open the existing local repository
-	    //git = Git.open(this.localDir.toFile());
-	    //this.sshService = new SshService();
-	    
+        this.sshService = new SshService(sshPath);
     }
     
+    /* 
+     * Helper method to determine if a Git repository has been initialized in the user-specified directory
+     */
+    private boolean gitRepoInitialized(Path localDir) {
+    	try {
+    		Process gitCheck = Runtime.getRuntime().exec("git rev-parse --is-inside-work-tree", null, localDir.toFile());
+    		BufferedReader stdInput = new BufferedReader(new InputStreamReader(gitCheck.getInputStream()));
+    		if (stdInput.readLine().trim() == "true")
+    			return true;
+    	} catch (IOException err) {
+    		err.printStackTrace();
+    	}
+    	return false;
+    }
     
     /* 
 	 * Helper method to clone repository from GitHub.
 	 */
 	@SuppressWarnings("static-access")
-	public void cloneRepository(String repo, String path) throws IOException {
-    	System.out.println("Cloning " + repo + " to " + path);
+	public void cloneRepository() throws IOException {
+    	System.out.println("Cloning " + this.repo + " to " + this.localDir.toString());
     	try {
-    		File dir = new File(path);
+    		File dir = new File(this.localDir.toString());
     		FileUtils.cleanDirectory(dir);
     		if (sshService != null) {
     			git.cloneRepository().setTransportConfigCallback(sshService.getTransportConfigCallback())
-    			.setDirectory(Paths.get(path).toFile()).setURI(repo)
+    			.setDirectory(this.localDir.toFile())
     			.call();
     		}
     	} catch (GitAPIException err) {
     		throw new IllegalStateException("\nCould not clone Git repository: ", err);
 	    }
     }
-    
-	
-	
 	
 	/* 
 	 * Helper method to add & commit changes made to the Git repository.
@@ -110,9 +130,21 @@ public class GitService {
             } else {
             	System.out.println("Something happened 	:(");
             }
-        } catch (GitAPIException e) {
-            e.printStackTrace();
+        } catch (GitAPIException err) {
+            err.printStackTrace();
         }
+    }
+    
+    /* 
+	 * Helper method to add & commit changes made to the Git repository.
+	 */
+    @SuppressWarnings("unused")
+	public final void stopSshService() {
+    	try {
+			this.sshService.stopService();
+		} catch (IOException err) {
+			err.printStackTrace();
+		}
     }
 
 }
