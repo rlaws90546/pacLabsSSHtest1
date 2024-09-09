@@ -13,7 +13,7 @@ public class GitMain {
 	@SuppressWarnings("static-access")
 	public static void main(String[] args) throws IOException, TransportException{
 	    // Create Git Service object
-		GitService gitService = new GitService("git@github.com:userName/repoName.git", "/path/to/local_directory");
+		GitService gitService = new GitService("git@github.com:userName/repoName.git", "/path/to/local_directory" /*, *OPTIONAL* "path/to/privKey"*/);
 		gitService.cloneRepository();
 		gitService.addCommitPush("file_to_push");
 		
