@@ -79,6 +79,27 @@ public class GitService {
     }
     
     /* 
+	 * Constructor used when SSH key is NOT in expected directory and private key is provided
+	 */
+    public GitService(String repoName, String cloneDirName, String privateKey ,String sshPath) throws IOException{
+    	
+    	this.repo = repoName;
+	    this.localDir = Paths.get(cloneDirName).toAbsolutePath().normalize();
+	    
+        try {
+        	if (gitRepoInitialized(this.localDir)) {
+        		git = Git.open(this.localDir.toFile());
+        	} else {	
+        		git = Git.init().setDirectory(this.localDir.toFile()).call();
+        	}
+		} catch (IllegalStateException | GitAPIException e) {
+			e.printStackTrace();
+		}
+        
+        this.sshService = new SshService(privateKey ,sshPath);
+    }
+    
+    /* 
      * Helper method to determine if a Git repository has been initialized in the user-specified directory
      */
     private boolean gitRepoInitialized(Path localDir) {
@@ -145,6 +166,11 @@ public class GitService {
 		} catch (IOException err) {
 			err.printStackTrace();
 		}
+    }
+    
+    @SuppressWarnings("unused")
+	public final void deleteTempFile() {
+    	this.sshService.deleteTempFile();
     }
 
 }
