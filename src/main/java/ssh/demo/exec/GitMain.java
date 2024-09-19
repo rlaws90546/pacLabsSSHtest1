@@ -16,6 +16,7 @@ public class GitMain {
 		// Create Git Service object
 		GitService gitService = new GitService("git@github.com:userName/repoName.git", "/path/to/local/gitDir", "**privateKey**", "/desired/path/to/temp/file");
 		
+		// Pick which method you would like to use from GitService --> cloneRepository() OR addCommitPush(fileName)
 		//gitService.cloneRepository();
 		gitService.addCommitPush("file_to_push");
 		

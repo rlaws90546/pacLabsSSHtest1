@@ -37,8 +37,9 @@ public class GitService {
 
 	
 	/* 
+	 * OLD CONSTRUCTORS
 	 * Constructor used when SSH key is in expected directory --> "Users or C:/.ssh"
-	 */
+	 * 
     public GitService(String repoName, String cloneDirName) throws IOException{
 
     	this.repo = repoName;
@@ -57,9 +58,7 @@ public class GitService {
 	    this.sshService = new SshService();
     }
     
-    /* 
 	 * Constructor used when SSH key is NOT in expected directory, which is set with the sshPath parameter
-	 */
     public GitService(String repoName, String cloneDirName, String sshPath) throws IOException{
     	
     	this.repo = repoName;
@@ -76,10 +75,11 @@ public class GitService {
 		}
         
         this.sshService = new SshService(sshPath);
-    }
+    } */
     
+	
     /* 
-	 * Constructor used when SSH key is NOT in expected directory and private key is provided
+	 * Constructor used when SSH key path is set and private key is provided as a String
 	 */
     public GitService(String repoName, String cloneDirName, String privateKey ,String sshPath) throws IOException{
     	
@@ -134,10 +134,9 @@ public class GitService {
     }
 	
 	/* 
-	 * Helper method to add & commit changes made to the Git repository.
+	 * Helper method to add, commit, & push changes made to the Git repository.
 	 */
-    @SuppressWarnings("unused")
-	public final void addCommitPush(String fileName) throws IOException {
+    public final void addCommitPush(String fileName) throws IOException {
     	try {
             // Add, commit, and push changes
             git.add().addFilepattern(fileName).call();
@@ -157,10 +156,9 @@ public class GitService {
     }
     
     /* 
-	 * Helper method to add & commit changes made to the Git repository.
+	 * Helper method to stop the SSH client
 	 */
-    @SuppressWarnings("unused")
-	public final void stopSshService() {
+    public final void stopSshService() {
     	try {
 			this.sshService.stopService();
 		} catch (IOException err) {
@@ -168,8 +166,10 @@ public class GitService {
 		}
     }
     
-    @SuppressWarnings("unused")
-	public final void deleteTempFile() {
+    /* 
+	 * Helper method to delete the temporary file with the private key
+	 */
+    public final void deleteTempFile() {
     	this.sshService.deleteTempFile();
     }
 
