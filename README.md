@@ -15,3 +15,5 @@ This repository automates connecting to GitHub using SSH keys when they are (or 
      c. Your private key
 
      d. The specific path where the temporary file for the private key should be located on your local machine
+
+** Checking private key location **
