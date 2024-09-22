@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.lang.Process;
 import java.lang.IllegalStateException;
 import org.slf4j.Logger;
@@ -39,7 +41,7 @@ public class GitService {
 	/* 
 	 * OLD CONSTRUCTORS
 	 * Constructor used when SSH key is in expected directory --> "Users or C:/.ssh"
-	 * 
+	 */
     public GitService(String repoName, String cloneDirName) throws IOException{
 
     	this.repo = repoName;
@@ -54,49 +56,6 @@ public class GitService {
 		} catch (IllegalStateException | GitAPIException e) {
 			e.printStackTrace();
 		}
-	    
-	    this.sshService = new SshService();
-    }
-    
-	 * Constructor used when SSH key is NOT in expected directory, which is set with the sshPath parameter
-    public GitService(String repoName, String cloneDirName, String sshPath) throws IOException{
-    	
-    	this.repo = repoName;
-	    this.localDir = Paths.get(cloneDirName).toAbsolutePath().normalize();
-	    
-        try {
-        	if (gitRepoInitialized(this.localDir)) {
-        		git = Git.open(this.localDir.toFile());
-        	} else {	
-        		git = Git.init().setDirectory(this.localDir.toFile()).call();
-        	}
-		} catch (IllegalStateException | GitAPIException e) {
-			e.printStackTrace();
-		}
-        
-        this.sshService = new SshService(sshPath);
-    } */
-    
-	
-    /* 
-	 * Constructor used when SSH key path is set and private key is provided as a String
-	 */
-    public GitService(String repoName, String cloneDirName, String privateKey ,String sshPath) throws IOException{
-    	
-    	this.repo = repoName;
-	    this.localDir = Paths.get(cloneDirName).toAbsolutePath().normalize();
-	    
-        try {
-        	if (gitRepoInitialized(this.localDir)) {
-        		git = Git.open(this.localDir.toFile());
-        	} else {	
-        		git = Git.init().setDirectory(this.localDir.toFile()).call();
-        	}
-		} catch (IllegalStateException | GitAPIException e) {
-			e.printStackTrace();
-		}
-        
-        this.sshService = new SshService(privateKey ,sshPath);
     }
     
     /* 
@@ -112,6 +71,30 @@ public class GitService {
     		err.printStackTrace();
     	}
     	return false;
+    }
+    
+    // Helper methods to create SSH service
+    public void createSshService() {
+    	this.sshService = new SshService();
+    }
+    public void createSshService(String privKeyPath) {
+    	this.sshService = new SshService(privKeyPath);
+    }
+    public void createSshService(String privKeyPath, String privKey) {
+    	try {
+			this.sshService = new SshService(privKeyPath, privKey);
+		} catch (IOException e) {
+			System.err.println("Error creating SSH service with private key path & private key loaded:\n");
+			e.printStackTrace();
+		}
+    }
+    public void betaCreateSshService(String privKeyPath, String privKey) {
+    	try {
+			this.sshService = new SshService(privKey, false);
+		} catch (IOException e) {
+			System.err.println("Error creating SSH service with private key path & private key loaded:\n");
+			e.printStackTrace();
+		}
     }
     
     /* 
@@ -136,19 +119,24 @@ public class GitService {
 	/* 
 	 * Helper method to add, commit, & push changes made to the Git repository.
 	 */
-    public final void addCommitPush(String fileName) throws IOException {
+    public final void addCommitPush() throws IOException {
     	try {
             // Add, commit, and push changes
-            git.add().addFilepattern(fileName).call();
-            git.commit().setMessage("Automated commit added " + fileName + " to repository").call();
+            git.add().addFilepattern(".").call();
+            
+            LocalDateTime dateTime = LocalDateTime.now();
+            DateTimeFormatter formatObj = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");  
+            String formattedDate = dateTime.format(formatObj);
+            
+            git.commit().setMessage("Automated commit: added changes to repository at -> " + formattedDate).call();
             if (sshService != null) {
 	            git.push()
 	               .setRemote(repo)
 	               .setTransportConfigCallback(sshService.getTransportConfigCallback())
 	               .call();
-	            System.out.println("Pushed " + fileName + " to remote repository successfully!");
+	            System.out.println("\nPushed changes to remote repository successfully!");
             } else {
-            	System.out.println("Something happened 	:(");
+            	System.out.println("\nSomething happened - SSH service is null");
             }
         } catch (GitAPIException err) {
             err.printStackTrace();
