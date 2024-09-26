@@ -23,6 +23,7 @@ public class SshService {
 	private SshClient sshClient;
 	private SshdSessionFactory sshdSessionFactory = null;
 	private File privateKeyFile;
+	private File configFile;
 	
 	@SuppressWarnings("unused")
 	public SshService() {
@@ -38,7 +39,6 @@ public class SshService {
         //};
 
         File defaultSshDir = new File(FS.DETECTED.userHome(), "/.ssh");
-        
         this.sshdSessionFactory = new SshdSessionFactoryBuilder()
                 .setPreferredAuthentications("publickey")
                 .setHomeDirectory(FS.DETECTED.userHome())
@@ -115,6 +115,8 @@ public class SshService {
 	 	
 	 	// Write the private key to the temporary file
 	    java.nio.file.Files.writeString(this.privateKeyFile.toPath(), privateKey);
+	    
+	    createConfigFile(sshDir);
 
 	 	// Create SSH session factory
         this.sshdSessionFactory = new SshdSessionFactoryBuilder()
@@ -138,6 +140,7 @@ public class SshService {
         };
 	}
 	
+	/*
 	@SuppressWarnings("unused")
 	public SshService(String privateKey, boolean bool) throws IOException{
 		
@@ -146,13 +149,7 @@ public class SshService {
 	    this.sshClient.setClientIdentityLoader(ClientIdentityLoader.DEFAULT);
 	    this.sshClient.start();
 	    
-	    
-	    /* Order of operations (in theory) is --> SshdSessionFactoryBuilder.build() takes a KeyCache object, 
-	     * 										  KeyCache.get() returns a KeyPair, KeyPair.getPrivateKey() returns private key
-	     * 
-	     * KeyCache keyCache = new KeyCache();
-	     */
-	    // Create SSH session factory
+	    // NEED TO --> SshdSessionFactoryBuilder.setDefaultKeysProvider(Function<File, Iterable<KeyPair>>);
         this.sshdSessionFactory = new SshdSessionFactoryBuilder()
                 .setPreferredAuthentications("publickey")
                 .setHomeDirectory(FS.DETECTED.userHome())
@@ -171,16 +168,21 @@ public class SshService {
                 }
             }
         };
-	}
+	} */
 	
 	// Returns necessary information for Git commands that require SSH verification
 	public TransportConfigCallback getTransportConfigCallback() {
 		return transportConfigCallback;
 	}
 	
-	public void createKnownHostsFile(File sshDir) {
-		// Need to do something to fix the issue with this...
-		// Either 1. user needs to provide more information or 2. figure out workaround with SshdSessionFactory
+	public void createConfigFile(File sshDir) throws IOException {
+		this.configFile = new File(sshDir, "config");
+		
+		String txt = "Host github.com\n"
+				+ "  AddKeysToAgent no\n"
+				+ "  StrictHostKeyChecking no";
+		
+		java.nio.file.Files.writeString(this.configFile.toPath(), txt);
 	}
 	
 	// Helper method to stop SSH client when necessary
@@ -197,5 +199,8 @@ public class SshService {
 	// Helper method to delete temporary key file... not super efficient and need some way to enforce
 	public void deleteTempFile() {
 		this.privateKeyFile.delete();
+	}
+	public void deleteConfigFile() {
+		this.configFile.delete();
 	}
 }

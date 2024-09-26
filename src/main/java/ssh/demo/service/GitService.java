@@ -88,6 +88,7 @@ public class GitService {
 			e.printStackTrace();
 		}
     }
+    /*
     public void betaCreateSshService(String privKeyPath, String privKey) {
     	try {
 			this.sshService = new SshService(privKey, false);
@@ -95,7 +96,7 @@ public class GitService {
 			System.err.println("Error creating SSH service with private key path & private key loaded:\n");
 			e.printStackTrace();
 		}
-    }
+    } */
     
     /* 
 	 * Helper method to clone repository from GitHub.
@@ -155,10 +156,8 @@ public class GitService {
     }
     
     /* 
-	 * Helper method to delete the temporary file with the private key
+	 * Helper methods to delete the private key and config files on completion of Git operations
 	 */
-    public final void deleteTempFile() {
-    	this.sshService.deleteTempFile();
-    }
-
+    public final void deleteTempFile() { this.sshService.deleteTempFile(); }
+    public final void deleteConfigFile() { this.sshService.deleteConfigFile(); }
 }

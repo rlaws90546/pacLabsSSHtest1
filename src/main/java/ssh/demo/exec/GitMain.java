@@ -5,15 +5,13 @@ import org.eclipse.jgit.api.errors.TransportException;
 
 import ssh.demo.service.GitService;
 
-
-
 /* 
  *  Class to execute clones/pushes from/to GitHub repository. Calls GitService.java to perform these operations.
  */
 public class GitMain {
 
 	@SuppressWarnings("static-access")
-	public static void main(String[] args) throws IOException, TransportException{
+	public static void main(String[] args) throws IOException, TransportException, java.nio.file.FileSystemException{
 		// Create Git Service object
 		GitService gitService = new GitService("git@github.com:userName/repoName.git", "/path/to/local/gitDir");
 		
@@ -25,6 +23,10 @@ public class GitMain {
 		
 		// Delete temporary key file 
 		gitService.deleteTempFile();
+		
+		// Delete temporary configuration file (only used when the private key is provided such as in the example above)
+		gitService.deleteConfigFile();
+				
 		
 		// Before the end of the main method, close out of SSH service
 		gitService.stopSshService();
