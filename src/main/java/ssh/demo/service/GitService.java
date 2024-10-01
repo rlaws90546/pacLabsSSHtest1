@@ -78,7 +78,12 @@ public class GitService {
     	this.sshService = new SshService();
     }
     public void createSshService(String privKeyPath) {
-    	this.sshService = new SshService(privKeyPath);
+    	try {
+			this.sshService = new SshService(privKeyPath);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
     public void createSshService(String privKeyPath, String privKey) {
     	try {
@@ -88,15 +93,14 @@ public class GitService {
 			e.printStackTrace();
 		}
     }
-    /*
-    public void betaCreateSshService(String privKeyPath, String privKey) {
+    public void betaCreateSshService(String privKeyPath, String pubKeyPath) {
     	try {
-			this.sshService = new SshService(privKey, false);
+			this.sshService = new SshService(privKeyPath, pubKeyPath, false);
 		} catch (IOException e) {
 			System.err.println("Error creating SSH service with private key path & private key loaded:\n");
 			e.printStackTrace();
 		}
-    } */
+    } 
     
     /* 
 	 * Helper method to clone repository from GitHub.

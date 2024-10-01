@@ -40,6 +40,9 @@ dependencies {
     implementation 'org.apache.sshd:sshd-core:2.10.0'
 	implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:6.7.0.202309050840-r'
     implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:6.7.0.202309050745-r'
+    
+    // https://mvnrepository.com/artifact/org.bouncycastle/bcprov-jdk15on
+	implementation 'org.bouncycastle:bcprov-jdk15on:1.64'
 
     testImplementation 'junit:junit:4.13.2'
 }
